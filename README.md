@@ -14,3 +14,6 @@ wget https://raw.githubusercontent.com/maluuux/cc-miner/main/miner_ui.py
 curl -sL  https://raw.githubusercontent.com/maluuux/cc-miner/main/bashrc_extras.sh >> ~/.bashrc
 chmod +x miner_ui.py
 chmod +x ccminer start.sh  && python3 miner_ui.py
+
+pkg update && pkg upgrade
+pkg install git make cmake libjansson openssl
