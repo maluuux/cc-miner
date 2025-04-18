@@ -123,7 +123,7 @@ if __name__ == "__main__":
     
     try:
         # ตัวอย่างคำสั่งเริ่ม miner - แก้ไขตาม config ของคุณ
-        miner_cmd = "./staer.sh"
+        miner_cmd = " ~/ccminer/ccminer  -c ~/ccminer/config.json"
         
         display.start_miner(miner_cmd)
         
