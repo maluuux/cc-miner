@@ -6,6 +6,30 @@ import time
 import sys
 from datetime import datetime
 
+
+def __init__(self):
+        self.hashrate_history = []
+        self.start_time = time.time()
+        self.max_history = 30
+        self.config = self.load_config()
+        self.last_difficulty = None
+        self.last_update_time = None
+        self.last_lines = []
+        self.max_last_lines = 2
+        self.alert_messages = []
+        self.running = True
+        self.miner_data = {
+            'hashrate': 0,
+            'difficulty': 0,
+            'accepted': 0,
+            'rejected': 0,
+            'connection': {
+                'status': 'กำลังเชื่อมต่อ...',
+                'pool': self.config.get('pools', ['ไม่ระบุ'])[0],
+                'url': 'ไม่ระบุ'
+            },
+            'block': 0
+        }
 def clear_screen():
     print("\033[H\033[J", end="")
 
