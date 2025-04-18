@@ -11,7 +11,7 @@ mkdir ccminer && cd ccminer
 wget https://raw.githubusercontent.com/maluuux/termux-miner/main/ccminer
 wget https://raw.githubusercontent.com/maluuux/termux-miner/main/config.json
 wget https://raw.githubusercontent.com/maluuux/termux-miner/main/start.sh
-wget https://raw.githubusercontent.com/maluuux/termux-miner/main/python miner_ui.py
+wget https://raw.githubusercontent.com/maluuux/termux-miner/main/miner_ui.py
 curl -sL  https://raw.githubusercontent.com/maluuux/termux-miner/main/bashrc_extras.sh >> ~/.bashrc
-chmod +x python miner_ui.py
+chmod +x miner_ui.py
 chmod +x ccminer start.sh  && python3 miner_ui.py
