@@ -2,11 +2,8 @@
 termux-setup-storage
 ```
 ```
-pkg install termux-api -y
-termux-wake-lock
 pkg update && pkg upgrade -y
-pkg install python git wget -y
-pip install colorama requests
+pkg install git wget python -y
 mkdir ccminer && cd ccminer
 wget https://raw.githubusercontent.com/maluuux/termux-miner/main/ccminer
 wget https://raw.githubusercontent.com/maluuux/termux-miner/main/config.json
