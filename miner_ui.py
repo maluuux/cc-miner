@@ -2,6 +2,8 @@ import time
 from datetime import datetime
 import sys
 import re
+import os
+import signal
 from collections import deque
 import subprocess
 from threading import Thread
@@ -16,6 +18,7 @@ class MobileMinerDisplay:
         self.cpu_cores = self.detect_cpu_cores()
         self.miner_process = None
         self.running = False
+        self.shutdown_requested = False
         
     def detect_cpu_cores(self):
         """ตรวจสอบจำนวน CPU cores โดยอัตโนมัติ"""
@@ -89,13 +92,13 @@ class MobileMinerDisplay:
         """เริ่มกระบวนการขุดโดยใช้ไฟล์ start.sh"""
         if not os.path.exists("./start.sh"):
             print("\033[1;31mERROR: ไม่พบไฟล์ start.sh ในโฟลเดอร์ปัจจุบัน\033[0m")
-            print("โปรดตรวจสอบว่าคุณอยู่ในโฟลเดอร์ที่ถูกต้อง")
             return False
             
-        self.running = True
-        
         try:
-            # ทำให้ไฟล์ start.sh สามารถรันได้ถ้ายังไม่สามารถรันได้
+            # รีเซ็ตค่าสถิติเมื่อเริ่มใหม่
+            self.__init__()  
+            
+            # ทำให้ไฟล์ start.sh สามารถรันได้
             os.chmod("./start.sh", 0o755)
             
             self.miner_process = subprocess.Popen(
@@ -104,10 +107,10 @@ class MobileMinerDisplay:
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 bufsize=1,
-                close_fds=True
+                preexec_fn=os.setsid  # สร้าง process group ใหม่
             )
             
-            # Thread สำหรับอ่านผลลัพธ์
+            self.running = True
             Thread(target=self.read_output, daemon=True).start()
             return True
             
@@ -128,33 +131,63 @@ class MobileMinerDisplay:
         self.running = False
 
     def stop_miner(self):
-        """หยุดกระบวนการขุด"""
+        """หยุดกระบวนการขุดอย่างปลอดภัย"""
+        if not self.running:
+            return
+            
         self.running = False
+        self.shutdown_requested = True
+        
         if self.miner_process:
-            self.miner_process.terminate()
             try:
-                self.miner_process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                self.miner_process.kill()
-            print("หยุดการทำงาน miner เรียบร้อยแล้ว")
+                # ส่งสัญญาณ SIGTERM ไปยังทั้ง process group
+                os.killpg(os.getpgid(self.miner_process.pid), signal.SIGTERM)
+                self.miner_process.wait(timeout=10)
+            except (ProcessLookupError, subprocess.TimeoutExpired):
+                try:
+                    # ถ้ายังไม่หยุด ส่ง SIGKILL
+                    os.killpg(os.getpgid(self.miner_process.pid), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            except Exception as e:
+                print(f"\033[1;33mWARNING: {e}\033[0m")
+            finally:
+                self.miner_process = None
 
-if __name__ == "__main__":
-    import os
-    
+    def restart_miner(self):
+        """เริ่มต้น miner ใหม่"""
+        self.stop_miner()
+        time.sleep(2)  # รอให้กระบวนการเก่าหยุดอย่างแน่นอน
+        return self.start_miner()
+
+def main():
     display = MobileMinerDisplay()
+    
+    def signal_handler(sig, frame):
+        print("\n\033[1;33mได้รับสัญญาณหยุด...\033[0m")
+        display.stop_miner()
+        sys.exit(0)
+    
+    # ตั้งค่าตัวจับสัญญาณ
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     try:
         print("\033[1;36mกำลังเริ่มต้น VRSC Miner...\033[0m")
         if display.start_miner():
             print("\033[1;32mเริ่มต้น miner สำเร็จ! กด Ctrl+C เพื่อหยุด\033[0m")
             
-            # รอจนกว่าจะหยุดโดยผู้ใช้
             while display.running:
+                # ตัวอย่าง: สามารถเพิ่มเงื่อนไข restart อัตโนมัติที่นี่
                 time.sleep(1)
                 
-    except KeyboardInterrupt:
-        print("\n\033[1;33mกำลังหยุด miner...\033[0m")
+    except Exception as e:
+        print(f"\033[1;31mเกิดข้อผิดพลาด: {e}\033[0m")
         
     finally:
-        display.stop_miner()
+        if display.running:
+            display.stop_miner()
         print("\033[1;36mปิดโปรแกรมเรียบร้อยแล้ว\033[0m")
+
+if __name__ == "__main__":
+    main()
