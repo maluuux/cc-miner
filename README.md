@@ -2,8 +2,9 @@
 termux-setup-storage
 ```
 ```
-pkg update && pkg upgrade -y
-pkg install git wget python -y
+yes | pkg update && pkg upgrade
+yes | pkg install python git make cmake
+pip install psutil colorama
 mkdir ccminer && cd ccminer
 wget https://raw.githubusercontent.com/maluuux/cc-miner/main/ccminer
 wget https://raw.githubusercontent.com/maluuux/cc-miner/main/config.json
