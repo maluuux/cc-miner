@@ -4,6 +4,7 @@ termux-setup-storage
 ```
 yes | pkg update && pkg upgrade
 yes | pkg install python git make cmake
+pkg install clang binutils build-essential
 pip install psutil colorama
 mkdir ccminer && cd ccminer
 wget https://raw.githubusercontent.com/maluuux/cc-miner/main/ccminer
