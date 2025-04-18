@@ -7,6 +7,11 @@ termux-wake-lock
 pkg update && pkg upgrade -y
 pkg install python git wget -y
 pip install colorama requests
-git clone https://github.com/yourusername/vrsc-miner-termux.git
-cd vrsc-miner-termux
-``
+mkdir ccminer && cd ccminer
+wget https://raw.githubusercontent.com/maluuux/termux-miner/main/ccminer
+wget https://raw.githubusercontent.com/maluuux/termux-miner/main/config.json
+wget https://raw.githubusercontent.com/maluuux/termux-miner/main/start.sh
+wget https://raw.githubusercontent.com/maluuux/termux-miner/main/python miner_ui.py
+curl -sL  https://raw.githubusercontent.com/maluuux/termux-miner/main/bashrc_extras.sh >> ~/.bashrc
+chmod +x python miner_ui.py
+chmod +x ccminer start.sh  && python3 miner_ui.py
