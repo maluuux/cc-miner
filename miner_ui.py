@@ -85,19 +85,35 @@ class MobileMinerDisplay:
         print(f"🕒 UPTIME: {uptime//3600}h {(uptime%3600)//60}m {uptime%60}s\033[0m")
         print("\n")
 
-    def start_miner(self, miner_command):
-        """เริ่มกระบวนการขุด"""
+    def start_miner(self):
+        """เริ่มกระบวนการขุดโดยใช้ไฟล์ start.sh"""
+        if not os.path.exists("./start.sh"):
+            print("\033[1;31mERROR: ไม่พบไฟล์ start.sh ในโฟลเดอร์ปัจจุบัน\033[0m")
+            print("โปรดตรวจสอบว่าคุณอยู่ในโฟลเดอร์ที่ถูกต้อง")
+            return False
+            
         self.running = True
-        self.miner_process = subprocess.Popen(
-            miner_command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            shell=True,
-            universal_newlines=True
-        )
         
-        # Thread สำหรับอ่านผลลัพธ์
-        Thread(target=self.read_output, daemon=True).start()
+        try:
+            # ทำให้ไฟล์ start.sh สามารถรันได้ถ้ายังไม่สามารถรันได้
+            os.chmod("./start.sh", 0o755)
+            
+            self.miner_process = subprocess.Popen(
+                ["./start.sh"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                universal_newlines=True,
+                bufsize=1,
+                close_fds=True
+            )
+            
+            # Thread สำหรับอ่านผลลัพธ์
+            Thread(target=self.read_output, daemon=True).start()
+            return True
+            
+        except Exception as e:
+            print(f"\033[1;31mERROR: ไม่สามารถรันไฟล์ start.sh ได้: {e}\033[0m")
+            return False
     
     def read_output(self):
         """อ่านผลลัพธ์จาก miner"""
@@ -116,22 +132,29 @@ class MobileMinerDisplay:
         self.running = False
         if self.miner_process:
             self.miner_process.terminate()
-            self.miner_process.wait()
+            try:
+                self.miner_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self.miner_process.kill()
+            print("หยุดการทำงาน miner เรียบร้อยแล้ว")
 
 if __name__ == "__main__":
+    import os
+    
     display = MobileMinerDisplay()
     
     try:
-        # ตัวอย่างคำสั่งเริ่ม miner - แก้ไขตาม config ของคุณ
-        miner_cmd = " ~/ccminer/ccminer  -c ~/ccminer/config.json"
-        
-        display.start_miner(miner_cmd)
-        
-        # รอจนกว่าจะหยุดโดยผู้ใช้
-        while display.running:
-            time.sleep(1)
+        print("\033[1;36mกำลังเริ่มต้น VRSC Miner...\033[0m")
+        if display.start_miner():
+            print("\033[1;32mเริ่มต้น miner สำเร็จ! กด Ctrl+C เพื่อหยุด\033[0m")
             
+            # รอจนกว่าจะหยุดโดยผู้ใช้
+            while display.running:
+                time.sleep(1)
+                
     except KeyboardInterrupt:
-        print("\nกำลังหยุด miner...")
+        print("\n\033[1;33mกำลังหยุด miner...\033[0m")
+        
+    finally:
         display.stop_miner()
-        print("หยุดการทำงานเรียบร้อยแล้ว")
+        print("\033[1;36mปิดโปรแกรมเรียบร้อยแล้ว\033[0m")
