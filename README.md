@@ -3,7 +3,7 @@ termux-setup-storage
 ```
 ```
 yes | pkg update && pkg upgrade -y
-yes | pkg install python git wget -y
+yes | pkg install python git wget -n
 yes | pkg install jansson -y
 yes | pkg install build-essential -y
 pip install psutil
