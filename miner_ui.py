@@ -1,116 +1,82 @@
-import os
 import subprocess
+import re
 import json
 import time
-import re
-
-def clear_screen():
-    os.system('clear')
+import sys
 
 def load_config():
     try:
-        with open('~/ccminer/config.json', 'r') as f:
+        with open('config.json', 'r') as f:
             return json.load(f)
     except FileNotFoundError:
         print("ไม่พบไฟล์ config.json กรุณาตรวจสอบ")
-        return None
+        sys.exit(1)
     except json.JSONDecodeError:
         print("ไฟล์ config.json มีรูปแบบไม่ถูกต้อง")
-        return None
+        sys.exit(1)
 
-def filter_miner_output(line):
+def filter_output(line):
     # กรองข้อความที่ไม่ต้องการแสดง
-    patterns_to_filter = [
-        r'temperature',
-        r'temp',
-        r'℃',
-        r'°C',
-        r'hashrate',
-        r'accept',
-        r'reject',
-        r'GPU',
-        r'CPU'
+    filters = [
+        'temperature', 'temp=', 'fan=', 'speed=', 
+        'GPU', 'CUDA', 'NVML', 'Watt', 'power='
     ]
     
-    for pattern in patterns_to_filter:
-        if re.search(pattern, line, re.IGNORECASE):
+    for f in filters:
+        if f.lower() in line.lower():
             return False
     
-    return True
+    # เก็บเฉพาะข้อมูลที่สำคัญ
+    important_patterns = [
+        r'accepted:\s*\d+/\d+',  # อัตราการรับงาน
+        r'hashrate:\s*\d+',      # ความเร็วในการขุด
+        r'VRSC',                 # ชื่อเหรียญ
+        r'yes!\s*\(\d+\.\d+\s*\)' # ยืนยันการขุดสำเร็จ
+    ]
+    
+    for pattern in important_patterns:
+        if re.search(pattern, line, re.IGNORECASE):
+            return True
+    
+    return False
 
 def run_miner():
     config = load_config()
-    if not config:
-        return
     
-    # ตรวจสอบว่าไฟล์ start.sh มีอยู่
-    if not os.path.exists('start.sh'):
+    # อ่านคำสั่งจากไฟล์ start.sh
+    try:
+        with open('start.sh', 'r') as f:
+            command = f.read().strip()
+    except FileNotFoundError:
         print("ไม่พบไฟล์ start.sh กรุณาตรวจสอบ")
-        return
+        sys.exit(1)
     
-    # เปลี่ยน permission ให้ไฟล์ start.sh สามารถรันได้
-    os.chmod('start.sh', 0o755)
-    
-    clear_screen()
-    print("กำลังเริ่มต้นขุดเหรียญ VRSC...")
-    print("ใช้โทรศัพท์มือถือในการขุดด้วย CPU")
-    print("กำลังซ่อนข้อมูลอุณหภูมิและข้อมูลที่ไม่จำเป็น...")
-    print("\nพิมพ์ 'stop' เพื่อหยุดการขุด\n")
-    
-    # รัน miner ผ่าน start.sh
+    # เริ่มกระบวนการขุด
     process = subprocess.Popen(
-        ['./start.sh'],
+        command,
+        shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
-        universal_newlines=True,
-        bufsize=1
+        universal_newlines=True
     )
+    
+    print("เริ่มการขุดเหรียญ VRSC ด้วย CPU...")
+    print("กำลังกรองข้อมูลที่ไม่จำเป็นออก...")
+    print("=" * 50)
     
     try:
         while True:
-            # ตรวจสอบว่ายังมี process ทำงานอยู่หรือไม่
-            if process.poll() is not None:
-                print("\nMiner หยุดทำงานแล้ว")
+            output = process.stdout.readline()
+            if output == '' and process.poll() is not None:
                 break
-            
-            # อ่าน output จาก miner
-            line = process.stdout.readline()
-            if not line:
-                continue
-            
-            # กรองและแสดงเฉพาะข้อความที่ต้องการ
-            if filter_miner_output(line):
-                print(line.strip())
-            
-            # ตรวจสอบคำสั่งหยุดจากผู้ใช้
-            user_input = input_non_blocking()
-            if user_input and user_input.lower() == 'stop':
-                print("\nกำลังหยุดการขุด...")
-                process.terminate()
-                try:
-                    process.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                break
-                
+            if output and filter_output(output):
+                # แสดงผลเฉพาะข้อมูลที่สำคัญ
+                print(output.strip())
+            time.sleep(0.1)
     except KeyboardInterrupt:
         print("\nกำลังหยุดการขุด...")
         process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-    
-    print("การขุดหยุดทำงานแล้ว")
-
-def input_non_blocking():
-    """ฟังก์ชันสำหรับรับ input โดยไม่บล็อกการทำงานหลัก"""
-    import sys
-    import select
-    
-    if select.select([sys.stdin], [], [], 0)[0]:
-        return sys.stdin.readline().strip()
-    return None
+        print("หยุดการขุดเรียบร้อยแล้ว")
 
 if __name__ == "__main__":
     run_miner()
