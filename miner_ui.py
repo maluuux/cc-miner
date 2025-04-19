@@ -6,7 +6,7 @@ from collections import deque
 
 # ตั้งค่าการแสดงผล
 MAX_LINES = 8
-LOG_FILE = os.path.expanduser("./start.sh")
+LOG_FILE = os.path.expanduser("~/ccminer/ccminer  -c ~/ccminer/config.json")
 
 def clear_screen():
     os.system('clear')
