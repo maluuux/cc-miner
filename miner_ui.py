@@ -4,6 +4,7 @@ import os
 import time
 import subprocess
 import sys
+import select  # เพิ่ม import นี้เพื่อแก้ error
 from datetime import datetime
 
 # Configuration
@@ -19,8 +20,9 @@ class MinerUI:
         self.stale_shares = 0
         self.hashrate = "0 kN/s"
         self.temperature = 0
-        self.threads = {}
+        self.threads = {f"T{i}": "0 kN/s" for i in range(1, 9)}
         self.start_time = time.time()
+        self.last_update = time.time()
         
     def clear_screen(self):
         os.system('clear')
@@ -34,6 +36,9 @@ class MinerUI:
             
     def parse_logs(self):
         try:
+            if not os.path.exists(LOG_FILE):
+                return
+                
             # Read last 20 lines of log
             result = subprocess.run(['tail', '-n', '20', LOG_FILE], 
                                  capture_output=True, text=True)
@@ -45,35 +50,33 @@ class MinerUI:
             self.stale_shares = 0
             
             for line in log_lines:
-                if 'accepted' in line:
+                if 'accepted' in line.lower():
                     self.accepted_shares += 1
-                elif 'rejected' in line:
+                elif 'rejected' in line.lower():
                     self.rejected_shares += 1
                 elif 'stale' in line.lower():
                     self.stale_shares += 1
                     
-                # Parse hashrate (example: "5002.12 kN/s")
+                # Parse hashrate
                 if 'kN/s' in line:
                     parts = line.split()
                     for i, part in enumerate(parts):
                         if part == 'kN/s' and i > 0:
                             self.hashrate = f"{parts[i-1]} kN/s"
                             
-                # Parse thread performance (example: "T1: 720 kN/s")
-                if 'T' in line and 'kN/s' in line:
-                    thread_part = line.split(':')[0]
-                    if thread_part.startswith('T') and thread_part[1:].isdigit():
-                        thread_num = thread_part[1:]
-                        hashrate_part = line.split('kN/s')[0].split()[-1]
-                        self.threads[f"T{thread_num}"] = f"{hashrate_part} kN/s"
+                # Parse thread performance
+                if any(f"T{i}:" in line for i in range(1, 9)) and 'kN/s' in line:
+                    thread_part = line.split(':')[0].strip()
+                    hashrate = line.split('kN/s')[0].split()[-1]
+                    self.threads[thread_part] = f"{hashrate} kN/s"
                         
         except Exception as e:
             print(f"Error parsing logs: {e}")
 
     def draw_progress_bar(self, percent):
-        bar = '▰' * int(percent / 10)
-        bar += '▱' * (10 - len(bar))
-        return f"{bar} {percent}%"
+        filled = '█' * int(percent / 10)
+        empty = '_' * (10 - len(filled))
+        return f"{filled}{empty} {percent}%"
         
     def get_uptime(self):
         uptime_sec = int(time.time() - self.start_time)
@@ -85,15 +88,15 @@ class MinerUI:
         self.clear_screen()
         
         # Header
-        print("VERUS MINER | POOL: sg.vipor.net ✔")
+        print("VERUS MINER | POOL: sg.vipor.net")
         print("━" * 40)
         
         # Main stats
-        print(f"⛏️ HASH: {self.hashrate} ▲1.2%")
-        print(f"🌡 TEMP: {self.temperature}°C {self.draw_progress_bar(72)}")
-        print(f"📶 NET: 1.4 KB/s ▲ Latency: 120ms")
-        print(f"🔄 SHARES: {self.accepted_shares}A/{self.rejected_shares}R (Stale: {self.stale_shares})")
-        print(f"⚡ EFFICIENCY: 98.5% Diff: 27\n")
+        print(f"HASH: {self.hashrate} ▲1.2%")
+        print(f"TEMP: {self.temperature}°C {self.draw_progress_bar(72)}")
+        print(f"NET: 1.4 KB/s ▲ Latency: 120ms")
+        print(f"SHARES: {self.accepted_shares}A/{self.rejected_shares}R (Stale: {self.stale_shares})")
+        print(f"EFFICIENCY: 98.5% Diff: 27\n")
         
         # Thread performance
         print("THREAD PERFORMANCE:")
@@ -103,7 +106,7 @@ class MinerUI:
             print(f"{thread_id}: {hashrate} {self.draw_progress_bar(80 - i*3)}")
         
         # Footer
-        print(f"\n⏱ UPTIME: {self.get_uptime()} ❗Alerts: 0")
+        print(f"\nUPTIME: {self.get_uptime()} | Alerts: 0")
         print("━" * 40)
         print("[Q] Quit [L] Logs [P] Pool Stats")
 
@@ -132,10 +135,10 @@ class MinerUI:
     def show_pool_stats(self):
         self.clear_screen()
         print("POOL STATISTICS:")
-        print("🔄 Active Workers: 12")
-        print("📶 Pool Hashrate: 1.23 GH/s")
-        print("💵 Estimated Earnings: 0.0021 VRSC/hr")
-        print("⏳ Last Block: 12m ago\n")
+        print("Active Workers: 12")
+        print("Pool Hashrate: 1.23 GH/s")
+        print("Estimated Earnings: 0.0021 VRSC/hr")
+        print("Last Block: 12m ago\n")
         input("Press Enter to return...")
 
 if __name__ == "__main__":
