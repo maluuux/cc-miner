@@ -9,7 +9,7 @@ def clear_screen():
 
 def load_config():
     try:
-        with open('config.json', 'r') as f:
+        with open('~/ccminer/config.json', 'r') as f:
             return json.load(f)
     except FileNotFoundError:
         print("ไม่พบไฟล์ config.json กรุณาตรวจสอบ")
