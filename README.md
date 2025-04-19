@@ -3,11 +3,7 @@ termux-setup-storage
 ```
 ```
 yes | pkg update && pkg upgrade
-yes | pkg install git make cmake libjansson openssl
-yes | pkg install wget
-yes | pkg install python
-pip install psutil
-pip install psutil colorama
+pkg install python git wget
 mkdir ccminer && cd ccminer
 wget https://raw.githubusercontent.com/maluuux/cc-miner/main/ccminer
 wget https://raw.githubusercontent.com/maluuux/cc-miner/main/config.json
