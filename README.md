@@ -2,8 +2,8 @@
 termux-setup-storage
 ```
 ```
-yes | pkg update && pkg upgrade
-yes | pkg install python git wget
+yes | pkg update && pkg upgrade -y
+yes | pkg install python git wget -y
 pip install psutil
 mkdir ccminer && cd ccminer
 wget https://raw.githubusercontent.com/maluuux/cc-miner/main/ccminer
