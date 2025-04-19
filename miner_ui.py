@@ -1,90 +1,58 @@
 #!/data/data/com.termux/files/usr/bin/python3
 import os
-import sys
 import time
+import sys
 from collections import deque
 
-# ตั้งค่าคำที่ต้องการตรวจจับ (คุณสามารถเพิ่ม/แก้ไขได้)
-KEYWORDS = {
-    'diff': 'ระดับความยาก:',
-    'accepted': '✅ ยอมรับแล้ว:',
-    'rejected': '❌ ถูกปฏิเสธ:',
-    'stale': '🕒 ล้าสมัย:',
-    'hashrate': '⚡ อัตราการขุด:',
-    'CPU': '🌡️ อุณหภูมิ CPU:'
-}
-
 # ตั้งค่าการแสดงผล
-MAX_LINES = 10  # จำนวนบรรทัดสูงสุดที่แสดง
-LOG_FILE = os.path.expanduser("~/miner.log")  # ไฟล์ log ของ CCminer
+MAX_LINES = 8
+LOG_FILE = os.path.expanduser("~/miner.log")
 
 def clear_screen():
     os.system('clear')
 
 def display_header():
-    print("🛠️ VRSC MINER LOG PROCESSOR")
+    print("⚡ VRSC MINER - REAL-TIME MONITOR")
     print("━" * 40)
-    print("คำอธิบายที่กำหนด:")
-    for k, v in KEYWORDS.items():
-        print(f"{k} → {v}...")
-    print("━" * 40)
-    print()
 
 def process_line(line):
-    """ประมวลผลแต่ละบรรทัดและแทนที่คำหลัก"""
-    processed = line
-    for keyword, replacement in KEYWORDS.items():
-        if keyword in line:
-            processed = processed.replace(keyword, replacement)
-    return processed.strip()
-
-def tail_file(filename, n=10):
-    """อ่านไฟล์แบบ real-time"""
-    try:
-        with open(filename, 'r') as f:
-            # ย้ายไปยังจุดสิ้นสุดของไฟล์
-            f.seek(0, os.SEEK_END)
-            
-            while True:
-                line = f.readline()
-                if not line:
-                    time.sleep(0.1)
-                    continue
-                yield line
-    except FileNotFoundError:
-        print(f"❌ ผิดพลาด: ไม่พบไฟล์ {filename}")
-        sys.exit(1)
+    """ปรับแต่งข้อความให้อ่านง่าย"""
+    line = (line.replace("Accepted", "✅ ยอมรับ")
+            .replace("diff", "ความยาก")
+            .replace("kH/s", "kH/s")
+            .replace("CPU", "🌡️ CPU")
+            .replace("NET New job", "📶 งานใหม่"))
+    return line.strip()
 
 def main():
-    clear_screen()
-    display_header()
-    
-    # เก็บประวัติการแสดงผล
     log_history = deque(maxlen=MAX_LINES)
     
     try:
-        print(f"กำลังตรวจสอบไฟล์: {LOG_FILE}\n")
-        print("━" * 40)
-        
-        for line in tail_file(LOG_FILE):
-            processed_line = process_line(line)
-            
-            # เพิ่มบรรทัดใหม่และรักษาจำนวนบรรทัดให้คงที่
-            log_history.append(processed_line)
+        while True:
             clear_screen()
             display_header()
             
-            # แสดงประวัติล่าสุด
-            for log_line in log_history:
-                print(log_line)
+            # อ่านไฟล์ล่าสุด (50 บรรทัดสุดท้าย)
+            if os.path.exists(LOG_FILE):
+                with open(LOG_FILE, 'r') as f:
+                    lines = f.readlines()[-50:]
                 
+                # กรองและประมวลผลบรรทัดใหม่
+                for line in lines:
+                    if any(x in line for x in ["Accepted", "CPU", "NET"]):
+                        processed = process_line(line)
+                        log_history.append(processed)
+            
+            # แสดงผล
+            for line in log_history:
+                print(line)
+            
             print("\n━" * 40)
             print("กด Ctrl+C เพื่อหยุด")
+            time.sleep(2)
             
     except KeyboardInterrupt:
         print("\n❌ หยุดการทำงาน")
-    except Exception as e:
-        print(f"\n⚠️ เกิดข้อผิดพลาด: {str(e)}")
 
 if __name__ == "__main__":
     main()
