@@ -6,7 +6,7 @@ from collections import deque
 
 # ตั้งค่าการแสดงผล
 MAX_LINES = 8
-LOG_FILE = os.path.expanduser("~/miner.log")
+LOG_FILE = os.path.expanduser("./start.sh")
 
 def clear_screen():
     os.system('clear')
