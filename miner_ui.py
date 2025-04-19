@@ -1,147 +1,116 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import os
-import sys
-import json
 import subprocess
-import re
+import json
 import time
+import re
 
 def clear_screen():
-    """ล้างหน้าจอ"""
     os.system('clear')
 
 def load_config():
-    """โหลดการตั้งค่าจากไฟล์ config.json"""
     try:
         with open('config.json', 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        print("⚠️ ไม่พบไฟล์ config.json กรุณาตรวจสอบอีกครั้ง")
-        sys.exit(1)
+        print("ไม่พบไฟล์ config.json กรุณาตรวจสอบ")
+        return None
     except json.JSONDecodeError:
-        print("⚠️ ไฟล์ config.json มีรูปแบบไม่ถูกต้อง")
-        sys.exit(1)
+        print("ไฟล์ config.json มีรูปแบบไม่ถูกต้อง")
+        return None
 
-def modify_config(config):
-    """ปรับแต่งการตั้งค่า config.json"""
-    print("\n⚙️ การตั้งค่าปัจจุบัน:")
-    print(f"Pool: {config['pool']}")
-    print(f"Wallet: {config['wallet'][:10]}...{config['wallet'][-5:]}")
-    print(f"Worker Name: {config['worker_name']}")
+def filter_miner_output(line):
+    # กรองข้อความที่ไม่ต้องการแสดง
+    patterns_to_filter = [
+        r'temperature',
+        r'temp',
+        r'℃',
+        r'°C',
+        r'hashrate',
+        r'accept',
+        r'reject',
+        r'GPU',
+        r'CPU'
+    ]
     
-    change = input("\nต้องการเปลี่ยนการตั้งค่าไหม? (y/n): ").lower()
-    if change == 'y':
-        config['pool'] = input("ใส่ที่อยู่ Pool (เช่น stratum+tcp://example.com:port): ")
-        config['wallet'] = input("ใส่ที่อยู่ Wallet: ")
-        config['worker_name'] = input("ใส่ชื่อ Worker: ")
-        
-        with open('config.json', 'w') as f:
-            json.dump(config, f, indent=4)
-        print("✅ บันทึกการตั้งค่าเรียบร้อยแล้ว")
-    else:
-        print("🚫 ไม่มีการเปลี่ยนแปลงการตั้งค่า")
+    for pattern in patterns_to_filter:
+        if re.search(pattern, line, re.IGNORECASE):
+            return False
+    
+    return True
 
-def start_mining():
-    """เริ่มต้นการขุดโดยซ่อนอุณหภูมิ CPU"""
-    print("\n⛏️ กำลังเริ่มการขุด...")
-    print("ℹ️ การแสดงอุณหภูมิ CPU จะถูกซ่อนไว้")
+def run_miner():
+    config = load_config()
+    if not config:
+        return
+    
+    # ตรวจสอบว่าไฟล์ start.sh มีอยู่
+    if not os.path.exists('start.sh'):
+        print("ไม่พบไฟล์ start.sh กรุณาตรวจสอบ")
+        return
+    
+    # เปลี่ยน permission ให้ไฟล์ start.sh สามารถรันได้
+    os.chmod('start.sh', 0o755)
+    
+    clear_screen()
+    print("กำลังเริ่มต้นขุดเหรียญ VRSC...")
+    print("ใช้โทรศัพท์มือถือในการขุดด้วย CPU")
+    print("กำลังซ่อนข้อมูลอุณหภูมิและข้อมูลที่ไม่จำเป็น...")
+    print("\nพิมพ์ 'stop' เพื่อหยุดการขุด\n")
+    
+    # รัน miner ผ่าน start.sh
+    process = subprocess.Popen(
+        ['./start.sh'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        universal_newlines=True,
+        bufsize=1
+    )
     
     try:
-        # ใช้คำสั่ง start.sh หรือเรียก ccminer โดยตรง
-        if os.path.exists('start.sh'):
-            process = subprocess.Popen(['bash', 'start.sh'], 
-                                      stdout=subprocess.PIPE, 
-                                      stderr=subprocess.PIPE,
-                                      universal_newlines=True)
-        else:
-            config = load_config()
-            command = [
-                './ccminer',
-                '-a', 'verus',
-                '-o', config['pool'],
-                '-u', config['wallet'],
-                '-p', 'x',
-                '--cpu-affinity', '1',
-                '--background'
-            ]
-            process = subprocess.Popen(command, 
-                                      stdout=subprocess.PIPE, 
-                                      stderr=subprocess.PIPE,
-                                      universal_newlines=True)
-        
-        # กรองและแสดงผลลัพธ์โดยซ่อนอุณหภูมิ
         while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
+            # ตรวจสอบว่ายังมี process ทำงานอยู่หรือไม่
+            if process.poll() is not None:
+                print("\nMiner หยุดทำงานแล้ว")
                 break
-            if output:
-                # กรองบรรทัดที่มีอุณหภูมิออก
-                if 'temperature' not in output.lower() and 'temp' not in output.lower():
-                    print(output.strip())
-        
-        print("\n⛏️ การขุดได้หยุดทำงาน")
+            
+            # อ่าน output จาก miner
+            line = process.stdout.readline()
+            if not line:
+                continue
+            
+            # กรองและแสดงเฉพาะข้อความที่ต้องการ
+            if filter_miner_output(line):
+                print(line.strip())
+            
+            # ตรวจสอบคำสั่งหยุดจากผู้ใช้
+            user_input = input_non_blocking()
+            if user_input and user_input.lower() == 'stop':
+                print("\nกำลังหยุดการขุด...")
+                process.terminate()
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                break
+                
     except KeyboardInterrupt:
-        print("\n🛑 หยุดการขุดโดยผู้ใช้")
+        print("\nกำลังหยุดการขุด...")
         process.terminate()
-    except Exception as e:
-        print(f"\n❌ เกิดข้อผิดพลาด: {str(e)}")
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+    
+    print("การขุดหยุดทำงานแล้ว")
 
-def main_menu():
-    """แสดงเมนูหลัก"""
-    clear_screen()
-    print("""
-    🚀 CCminer Manager สำหรับ Termux 🚀
-    ----------------------------------
-    1. เริ่มการขุด (ซ่อนอุณหภูมิ)
-    2. เปลี่ยนการตั้งค่า
-    3. ตรวจสอบสถานะการขุด
-    4. หยุดการขุด
-    5. ออกจากโปรแกรม
-    ----------------------------------
-    ℹ️ หมายเหตุ: โปรแกรมนี้สำหรับใช้ CPU เท่านั้น
-    """)
-
-def main():
-    """ฟังก์ชันหลัก"""
-    while True:
-        main_menu()
-        choice = input("เลือกเมนู (1-5): ")
-        
-        if choice == '1':
-            start_mining()
-            input("\nกด Enter เพื่อกลับสู่เมนูหลัก...")
-        elif choice == '2':
-            config = load_config()
-            modify_config(config)
-            input("\nกด Enter เพื่อกลับสู่เมนูหลัก...")
-        elif choice == '3':
-            print("\n🔍 กำลังตรวจสอบสถานะการขุด...")
-            # คำสั่งตรวจสอบกระบวนการขุด
-            os.system('ps aux | grep ccminer | grep -v grep')
-            input("\nกด Enter เพื่อกลับสู่เมนูหลัก...")
-        elif choice == '4':
-            print("\n🛑 กำลังหยุดกระบวนการขุด...")
-            os.system('pkill -f ccminer')
-            print("✅ หยุดการขุดเรียบร้อยแล้ว")
-            input("\nกด Enter เพื่อกลับสู่เมนูหลัก...")
-        elif choice == '5':
-            print("\n👋 ออกจากโปรแกรม... ขอบคุณที่ใช้บริการ!")
-            sys.exit(0)
-        else:
-            print("\n⚠️ กรุณาเลือกหมายเลขระหว่าง 1-5 เท่านั้น")
-            time.sleep(1)
+def input_non_blocking():
+    """ฟังก์ชันสำหรับรับ input โดยไม่บล็อกการทำงานหลัก"""
+    import sys
+    import select
+    
+    if select.select([sys.stdin], [], [], 0)[0]:
+        return sys.stdin.readline().strip()
+    return None
 
 if __name__ == "__main__":
-    # ตรวจสอบว่าใช้งานใน Termux หรือไม่
-    if not os.path.exists('/data/data/com.termux/files/home'):
-        print("⚠️ โปรแกรมนี้ออกแบบมาสำหรับใช้งานใน Termux เท่านั้น")
-        sys.exit(1)
-    
-    # ตรวจสอบว่า ccminer มีอยู่หรือไม่
-    if not os.path.exists('ccminer') and not os.path.exists('start.sh'):
-        print("⚠️ ไม่พบไฟล์ ccminer หรือ start.sh ในไดเรกทอรีปัจจุบัน")
-        sys.exit(1)
-    
-    main()
+    run_miner()
