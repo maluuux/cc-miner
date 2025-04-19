@@ -1,82 +1,100 @@
 import subprocess
-import re
 import json
+import os
+import re
 import time
-import sys
+
+def clear_screen():
+    os.system('clear')
 
 def load_config():
     try:
         with open('config.json', 'r') as f:
             return json.load(f)
     except FileNotFoundError:
-        print("ไม่พบไฟล์ config.json กรุณาตรวจสอบ")
-        sys.exit(1)
+        print("⚠️ ไม่พบไฟล์ config.json กรุณาตรวจสอบ")
+        return None
     except json.JSONDecodeError:
-        print("ไฟล์ config.json มีรูปแบบไม่ถูกต้อง")
-        sys.exit(1)
+        print("⚠️ ไฟล์ config.json มีรูปแบบไม่ถูกต้อง")
+        return None
 
-def filter_output(line):
-    # กรองข้อความที่ไม่ต้องการแสดง
-    filters = [
-        'temperature', 'temp=', 'fan=', 'speed=', 
-        'GPU', 'CUDA', 'NVML', 'Watt', 'power='
+def filter_miner_output(line):
+    # กรองข้อมูลที่ไม่ต้องการแสดง
+    if 'temperature' in line.lower():
+        return False
+    if 'temp' in line.lower():
+        return False
+    if 'cpu' in line.lower() and 'usage' in line.lower():
+        return False
+    
+    # เก็บเฉพาะข้อมูลสำคัญ
+    patterns = [
+        r'accepted',
+        r'shares',
+        r'hashrate',
+        r'verus',
+        r'VRSC',
+        r'block',
+        r'stratum'
     ]
     
-    for f in filters:
-        if f.lower() in line.lower():
-            return False
-    
-    # เก็บเฉพาะข้อมูลที่สำคัญ
-    important_patterns = [
-        r'accepted:\s*\d+/\d+',  # อัตราการรับงาน
-        r'hashrate:\s*\d+',      # ความเร็วในการขุด
-        r'VRSC',                 # ชื่อเหรียญ
-        r'yes!\s*\(\d+\.\d+\s*\)' # ยืนยันการขุดสำเร็จ
-    ]
-    
-    for pattern in important_patterns:
-        if re.search(pattern, line, re.IGNORECASE):
-            return True
-    
-    return False
+    return any(re.search(p, line, re.IGNORECASE) for p in patterns)
 
 def run_miner():
     config = load_config()
+    if not config:
+        print("❌ ไม่สามารถเริ่มต้น miner ได้เนื่องจากปัญหากับ config")
+        return
     
-    # อ่านคำสั่งจากไฟล์ start.sh
-    try:
-        with open('start.sh', 'r') as f:
-            command = f.read().strip()
-    except FileNotFoundError:
-        print("ไม่พบไฟล์ start.sh กรุณาตรวจสอบ")
-        sys.exit(1)
+    if not os.path.exists('start.sh'):
+        print("❌ ไม่พบไฟล์ start.sh")
+        return
     
-    # เริ่มกระบวนการขุด
-    process = subprocess.Popen(
-        command,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        universal_newlines=True
-    )
+    # ตั้งค่าสิทธิ์ให้ไฟล์ start.sh
+    os.chmod('start.sh', 0o755)
     
-    print("เริ่มการขุดเหรียญ VRSC ด้วย CPU...")
-    print("กำลังกรองข้อมูลที่ไม่จำเป็นออก...")
-    print("=" * 50)
+    clear_screen()
+    print("🛠️ กำลังเริ่มต้น VerusCoin (VRSC) Miner...")
+    print("📌 ใช้โทรศัพท์มือถือในการขุดด้วย CPU")
+    print("🔕 ปิดการแสดงอุณหภูมิ CPU")
+    print("🔄 กรุณารอสักครู่...\n")
     
     try:
+        process = subprocess.Popen(
+            ['./start.sh'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            universal_newlines=True,
+            bufsize=1
+        )
+        
+        print("✅ Miner เริ่มทำงานแล้ว!\n")
+        print("=== กำลังแสดงผลลัพธ์สำคัญ (กรองอุณหภูมิออกแล้ว) ===\n")
+        
         while True:
-            output = process.stdout.readline()
-            if output == '' and process.poll() is not None:
+            line = process.stdout.readline()
+            if not line:
                 break
-            if output and filter_output(output):
-                # แสดงผลเฉพาะข้อมูลที่สำคัญ
-                print(output.strip())
+                
+            if filter_miner_output(line):
+                print(line.strip())
+                
             time.sleep(0.1)
+                
     except KeyboardInterrupt:
-        print("\nกำลังหยุดการขุด...")
-        process.terminate()
-        print("หยุดการขุดเรียบร้อยแล้ว")
+        print("\n🛑 รับสัญญาณหยุด 작업...")
+    except Exception as e:
+        print(f"❌ เกิดข้อผิดพลาด: {str(e)}")
+    finally:
+        if 'process' in locals():
+            process.terminate()
+        print("\n❎ ปิดโปรแกรม Miner แล้ว\n")
 
 if __name__ == "__main__":
+    print("\n=== Python Script สำหรับจัดการ CCminer ใน Termux ===")
+    print("=== พัฒนาสำหรับขุดเหรียญ VRSC ด้วย CPU โทรศัพท์ ===\n")
+    
     run_miner()
+    
+    print("🙏 ขอบคุณที่ใช้สคริปต์นี้")
+    print("⚠️ หมายเหตุ: การขุด cryptocurrency อาจทำให้อุปกรณ์ร้อนได้")
