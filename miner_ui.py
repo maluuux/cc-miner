@@ -3,13 +3,18 @@ import re
 import os
 import time
 
+# Custom style for background color and text
 Style = {
     "reset": "\033[0m",
     "green": "\033[92m",
     "cyan": "\033[96m",
     "yellow": "\033[93m",
     "bold": "\033[1m",
-    "dim": "\033[2m"
+    "bg_black": "\033[48;5;235m",
+    "bg_green": "\033[48;5;22m",
+    "bg_cyan": "\033[48;5;38m",
+    "bg_yellow": "\033[48;5;220m",
+    "bg_red": "\033[48;5;196m",
 }
 
 shares = []
@@ -25,18 +30,21 @@ def print_ui():
     print("  VRSC Miner - Live Status")
     print("━━━━━━━━━━━━━━━━━━━━━━━" + Style['reset'])
 
+    # Print last 5 share accepted logs with a nice background
     for s in shares[-5:]:
-        print(f"{Style['green']}[✓] {s}{Style['reset']}")
+        print(f"{Style['bg_green']} {Style['green']}[✓] {s} {Style['reset']}")
 
+    # Print the latest speed logs with cyan background
     if speeds:
-        print(f"\n{Style['cyan']}[Speed]{Style['reset']}")
+        print(f"\n{Style['bg_cyan']}[Speed]{Style['reset']}")
         for sp in speeds[-3:]:
-            print(f"  {sp}")
+            print(f"{Style['bg_cyan']}  {sp} {Style['reset']}")
 
+    # Print the status messages with yellow background
     if status_lines:
-        print(f"\n{Style['yellow']}[Status]{Style['reset']}")
+        print(f"\n{Style['bg_yellow']}[Status]{Style['reset']}")
         for line in status_lines[-3:]:
-            print(f"  {line}")
+            print(f"{Style['bg_yellow']}  {line} {Style['reset']}")
 
     print(f"{Style['cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
     print(" Press Ctrl+C to stop mining")
@@ -68,7 +76,7 @@ def run_monitor():
                 status_lines.append(line)
 
             print_ui()
-            time.sleep(0.05)
+            time.sleep(0.05)  # Update every 50ms
 
     except KeyboardInterrupt:
         process.terminate()
