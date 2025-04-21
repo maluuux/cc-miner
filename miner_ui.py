@@ -1,7 +1,8 @@
 import subprocess
 import re
+import time
+import os
 
-# สีสำหรับตกแต่งข้อความ (ANSI Escape Codes)
 class Style:
     RESET = "\033[0m"
     GREEN = "\033[92m"
@@ -11,26 +12,40 @@ class Style:
     BOLD = "\033[1m"
     DIM = "\033[2m"
 
+def clear_screen():
+    os.system('clear' if os.name == 'posix' else 'cls')
+
+def print_banner():
+    banner = f"""
+{Style.CYAN}{Style.BOLD}
+   __      ______  _____  _____   _____  __  __ _____  ____  
+   \ \    / / __ \|  __ \|  __ \ / ____||  \/  |  __ \|  _ \ 
+    \ \  / / |  | | |__) | |__) | (___  | \  / | |__) | | | |
+     \ \/ /| |  | |  _  /|  ___/ \___ \ | |\/| |  _  /| | | |
+      \  / | |__| | | \ \| |     ____) || |  | | | \ \| |_| |
+       \/   \____/|_|  \_\_|    |_____/ |_|  |_|_|  \_\____/ 
+{Style.RESET}
+    Monitoring ccminer | VRSC | Clean & Cool Output
+    Press Ctrl+C to stop.
+    -------------------------------------------------------
+"""
+    print(banner)
+
 def format_line(line):
-    # ลบ newline ทิ้งก่อน
     line = line.strip()
 
-    # ถ้ามีคำว่า "accepted"
     if "accepted" in line.lower():
-        return f"{Style.GREEN}{Style.BOLD}[✓] {line}{Style.RESET}"
-
-    # ถ้ามีคำว่า "MH/s"
+        return f"{Style.GREEN}[✓] {line}{Style.RESET}"
     elif "mh/s" in line.lower():
-        return f"{Style.CYAN}{Style.BOLD}[Speed] {line}{Style.RESET}"
-
-    # การเชื่อมต่อหรือสถานะ
+        return f"{Style.CYAN}[Speed] {line}{Style.RESET}"
     elif "stratum" in line.lower() or "starting" in line.lower():
         return f"{Style.YELLOW}[Status] {line}{Style.RESET}"
-
-    # ค่าอื่น ๆ
     return f"{Style.DIM}{line}{Style.RESET}"
 
 def run_ccminer():
+    clear_screen()
+    print_banner()
+
     process = subprocess.Popen(
         ['./start.sh'],
         stdout=subprocess.PIPE,
@@ -39,19 +54,14 @@ def run_ccminer():
         bufsize=1
     )
 
-    print(f"{Style.BOLD}{Style.CYAN}เริ่มต้นการขุด VRSC...{Style.RESET}\n")
-
     try:
         for line in process.stdout:
-            # ข้ามบรรทัดที่มี temp หรือ temperature
             if re.search(r"(temp|temperature)", line, re.IGNORECASE):
                 continue
-
-            formatted = format_line(line)
-            print(formatted)
+            print(format_line(line))
     except KeyboardInterrupt:
         process.terminate()
-        print(f"\n{Style.RED}หยุดการขุดแล้ว โดยผู้ใช้กด Ctrl+C{Style.RESET}")
+        print(f"\n{Style.RED}คุณได้หยุดการขุดแล้ว ขอบคุณที่ใช้งาน!{Style.RESET}")
     except Exception as e:
         print(f"{Style.RED}เกิดข้อผิดพลาด: {e}{Style.RESET}")
         process.terminate()
