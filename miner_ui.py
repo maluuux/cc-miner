@@ -17,16 +17,15 @@ def get_time():
 def color_text(text, color):
     return f"{color}{text}{Style.RESET}"
 
-# กำหนดคำที่จะใช้แทน พร้อมข้อความที่ต้องการแสดง
+# กำหนดคำสำคัญและคำแทน
 custom_keywords = {
-    "diff": "⚠️ ค่าความยากเปลี่ยนแล้ว!",
     "new job": "📥 งานใหม่เข้ามา",
     "stratum": "🔌 เชื่อมต่อ pool แล้ว",
     "accepted": "✅ แชร์สำเร็จ!",
     "rejected": "❌ แชร์ถูกปฏิเสธ!",
 }
 
-# pattern ตรวจจับค่า speed แบบกว้างขึ้น
+# pattern ตรวจ speed
 speed_patterns = [
     r"speed.*?([0-9.]+)\s*(k|m|g)?h/s",
     r"([0-9.]+)\s*(k|m|g)?h/s",
@@ -50,34 +49,39 @@ def run_miner_monitor():
             now = get_time()
             output = ""
 
-            # ตรวจจับ difficulty แบบเจาะจง พร้อมแสดงค่า
-            diff_match = re.search(r'diff(?:iculty)?(?: changed)?(?: to)?\s*([0-9.]+)', line.lower())
-            if diff_match:
-                diff_value = diff_match.group(1)
-                output = f"🕒 {now}   ⚠️ ค่าความยากถูกปรับเป็น {color_text(diff_value, Style.YELLOW)}"
-            
-            # จับคำแทนอื่น ๆ (ถ้ายังไม่มี output)
-            if not output:
+            # ตรวจจับ ALARM แล้วแสดงข้อความเต็ม พร้อมสีแดง
+            if "alarm" in line.lower():
+                output = f"🕒 {now}   {color_text('⚠️ แจ้งเตือน: ' + line, Style.RED)}"
+
+            # ตรวจจับ difficulty หรือ different พร้อมค่า
+            elif "diff" in line.lower():
+                diff_match = re.search(r'diff(?:iculty)?(?: changed)?(?: to)?\s*([0-9.]+)', line.lower())
+                if diff_match:
+                    diff_value = diff_match.group(1)
+                    output = f"🕒 {now}   ⚠️ ค่าความยากถูกปรับเป็น {color_text(diff_value, Style.YELLOW)}"
+
+            # ตรวจจับคำแทนทั่วไป
+            elif not output:
                 for keyword, replacement in custom_keywords.items():
                     if keyword in line.lower():
                         output = f"🕒 {now}   {color_text(replacement, Style.YELLOW)}"
                         break
 
-            # ตรวจ speed
+            # ตรวจจับ speed ที่มากกว่า 2.0 MH/s
             if not output:
                 for pattern in speed_patterns:
                     match = re.search(pattern, line.lower())
                     if match:
-                        speed_val = match.group(1)
-                        unit = match.group(2).upper() + "H/s" if match.group(2) else "H/s"
-                        speed_text = f"{speed_val} {unit}"
-                        output = f"🕒 {now}   ⚡ {color_text(speed_text, Style.CYAN)}"
-                        break
+                        speed_val = float(match.group(1))
+                        unit = match.group(2).upper() if match.group(2) else ""
+                        if unit == "M" and speed_val >= 2.0:
+                            speed_text = f"{speed_val} MH/s"
+                            output = f"🕒 {now}   ⚡ {color_text(speed_text, Style.CYAN)}"
+                            break
 
-            # แสดงผล
             if output:
                 print(output)
-                time.sleep(0.1)
+                time.sleep(0.05)
 
     except KeyboardInterrupt:
         process.terminate()
