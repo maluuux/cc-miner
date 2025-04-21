@@ -34,8 +34,6 @@ def run_miner_monitor():
             now = get_time()
             output = ""
 
-            elif "accepted" in line.lower():
-                output = f"{color_text(line, Style.GREEN)}"
             elif "different" in line.lower() or "diff" in line.lower():
             # แทนที่คำว่า 'different' ด้วยข้อความใหม่
                 custom_message = "⚠️ ค่าความยากเปลี่ยนแล้ว!"  # <<== คุณสามารถเปลี่ยนข้อความนี้ได้
