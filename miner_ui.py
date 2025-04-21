@@ -1,51 +1,48 @@
 import subprocess
 import re
-import time
 import os
+import time
 
-class Style:
-    RESET = "\033[0m"
-    GREEN = "\033[92m"
-    CYAN = "\033[96m"
-    YELLOW = "\033[93m"
-    RED = "\033[91m"
-    BOLD = "\033[1m"
-    DIM = "\033[2m"
+Style = {
+    "reset": "\033[0m",
+    "green": "\033[92m",
+    "cyan": "\033[96m",
+    "yellow": "\033[93m",
+    "bold": "\033[1m",
+    "dim": "\033[2m"
+}
 
-def clear_screen():
-    os.system('clear' if os.name == 'posix' else 'cls')
+shares = []
+speeds = []
+status_lines = []
 
-def print_banner():
-    banner = f"""
-{Style.CYAN}{Style.BOLD}
-   __      ______  _____  _____   _____  __  __ _____  ____  
-   \ \    / / __ \|  __ \|  __ \ / ____||  \/  |  __ \|  _ \ 
-    \ \  / / |  | | |__) | |__) | (___  | \  / | |__) | | | |
-     \ \/ /| |  | |  _  /|  ___/ \___ \ | |\/| |  _  /| | | |
-      \  / | |__| | | \ \| |     ____) || |  | | | \ \| |_| |
-       \/   \____/|_|  \_\_|    |_____/ |_|  |_|_|  \_\____/ 
-{Style.RESET}
-    Monitoring ccminer | VRSC | Clean & Cool Output
-    Press Ctrl+C to stop.
-    -------------------------------------------------------
-"""
-    print(banner)
+def clear():
+    os.system('clear')
 
-def format_line(line):
-    line = line.strip()
+def print_ui():
+    clear()
+    print(f"{Style['cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
+    print("  VRSC Miner - Live Status")
+    print("━━━━━━━━━━━━━━━━━━━━━━━" + Style['reset'])
 
-    if "accepted" in line.lower():
-        return f"{Style.GREEN}[✓] {line}{Style.RESET}"
-    elif "mh/s" in line.lower():
-        return f"{Style.CYAN}[Speed] {line}{Style.RESET}"
-    elif "stratum" in line.lower() or "starting" in line.lower():
-        return f"{Style.YELLOW}[Status] {line}{Style.RESET}"
-    return f"{Style.DIM}{line}{Style.RESET}"
+    for s in shares[-5:]:
+        print(f"{Style['green']}[✓] {s}{Style['reset']}")
 
-def run_ccminer():
-    clear_screen()
-    print_banner()
+    if speeds:
+        print(f"\n{Style['cyan']}[Speed]{Style['reset']}")
+        for sp in speeds[-3:]:
+            print(f"  {sp}")
 
+    if status_lines:
+        print(f"\n{Style['yellow']}[Status]{Style['reset']}")
+        for line in status_lines[-3:]:
+            print(f"  {line}")
+
+    print(f"{Style['cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
+    print(" Press Ctrl+C to stop mining")
+    print("━━━━━━━━━━━━━━━━━━━━━━━" + Style['reset'])
+
+def run_monitor():
     process = subprocess.Popen(
         ['./start.sh'],
         stdout=subprocess.PIPE,
@@ -56,15 +53,29 @@ def run_ccminer():
 
     try:
         for line in process.stdout:
+            line = line.strip()
+
+            # ข้าม temperature
             if re.search(r"(temp|temperature)", line, re.IGNORECASE):
                 continue
-            print(format_line(line))
+
+            # แยกหมวดหมู่
+            if "accepted" in line.lower():
+                shares.append(line)
+            elif "mh/s" in line.lower():
+                speeds.append(line)
+            elif "stratum" in line.lower() or "new job" in line.lower():
+                status_lines.append(line)
+
+            print_ui()
+            time.sleep(0.05)
+
     except KeyboardInterrupt:
         process.terminate()
-        print(f"\n{Style.RED}คุณได้หยุดการขุดแล้ว ขอบคุณที่ใช้งาน!{Style.RESET}")
+        print(f"{Style['yellow']}หยุดการขุดแล้ว ขอบคุณที่ใช้งานครับ{Style['reset']}")
     except Exception as e:
-        print(f"{Style.RED}เกิดข้อผิดพลาด: {e}{Style.RESET}")
         process.terminate()
+        print(f"{Style['red']}เกิดข้อผิดพลาด: {e}{Style['reset']}")
 
 if __name__ == "__main__":
-    run_ccminer()
+    run_monitor()
