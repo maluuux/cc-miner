@@ -2,19 +2,21 @@ import subprocess
 import re
 import os
 import time
+from datetime import datetime
 
-# Custom style for background color and text
+# Custom styles for background color and text
 Style = {
     "reset": "\033[0m",
     "green": "\033[92m",
     "cyan": "\033[96m",
     "yellow": "\033[93m",
-    "bold": "\033[1m",
+    "purple": "\033[95m",
     "bg_black": "\033[48;5;235m",
     "bg_green": "\033[48;5;22m",
     "bg_cyan": "\033[48;5;38m",
     "bg_yellow": "\033[48;5;220m",
-    "bg_red": "\033[48;5;196m",
+    "bg_purple": "\033[48;5;129m",
+    "bold": "\033[1m"
 }
 
 shares = []
@@ -24,13 +26,17 @@ status_lines = []
 def clear():
     os.system('clear')
 
+def get_current_time():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 def print_ui():
     clear()
-    print(f"{Style['cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
+    print(f"{Style['bg_purple']} {Style['bold']}Date: {get_current_time()} {Style['reset']}")
+    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━{Style['reset']}")
     print("  VRSC Miner - Live Status")
-    print("━━━━━━━━━━━━━━━━━━━━━━━" + Style['reset'])
+    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━{Style['reset']}")
 
-    # Print last 5 share accepted logs with a nice background
+    # Print last 5 share accepted logs with a green background
     for s in shares[-5:]:
         print(f"{Style['bg_green']} {Style['green']}[✓] {s} {Style['reset']}")
 
@@ -46,9 +52,9 @@ def print_ui():
         for line in status_lines[-3:]:
             print(f"{Style['bg_yellow']}  {line} {Style['reset']}")
 
-    print(f"{Style['cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
+    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
     print(" Press Ctrl+C to stop mining")
-    print("━━━━━━━━━━━━━━━━━━━━━━━" + Style['reset'])
+    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━{Style['reset']}")
 
 def run_monitor():
     process = subprocess.Popen(
