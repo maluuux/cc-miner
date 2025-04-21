@@ -17,14 +17,21 @@ def get_time():
 def color_text(text, color):
     return f"{color}{text}{Style.RESET}"
 
-# คำที่ต้องการแทนที่ พร้อมข้อความใหม่
+# กำหนดคำที่จะใช้แทน พร้อมข้อความที่ต้องการแสดง
 custom_keywords = {
-    "different": "⚠️ ค่าความยากเปลี่ยนแล้ว!",
+    "diff": "⚠️ ค่าความยากเปลี่ยนแล้ว!",
     "new job": "📥 งานใหม่เข้ามา",
     "stratum": "🔌 เชื่อมต่อ pool แล้ว",
     "accepted": "✅ แชร์สำเร็จ!",
     "rejected": "❌ แชร์ถูกปฏิเสธ!",
 }
+
+# pattern ตรวจจับค่า speed แบบกว้างขึ้น
+speed_patterns = [
+    r"speed.*?([0-9.]+)\s*(k|m|g)?h/s",
+    r"([0-9.]+)\s*(k|m|g)?h/s",
+    r"total:\s*([0-9.]+)\s*(k|m|g)?h/s"
+]
 
 def run_miner_monitor():
     process = subprocess.Popen(
@@ -43,15 +50,22 @@ def run_miner_monitor():
             now = get_time()
             output = ""
 
-            # ตรวจสอบคำที่ต้องแทน
+            # จับคำแทนก่อน
             for keyword, replacement in custom_keywords.items():
                 if keyword in line.lower():
                     output = f"🕒 {now}   {color_text(replacement, Style.YELLOW)}"
                     break
 
-            # ตรวจจับ speed (mh/s)
-            if not output and "mh/s" in line.lower():
-                output = f"🕒 {now}   ⚡ {color_text(line, Style.CYAN)}"
+            # ตรวจ speed
+            if not output:
+                for pattern in speed_patterns:
+                    match = re.search(pattern, line.lower())
+                    if match:
+                        speed_val = match.group(1)
+                        unit = match.group(2).upper() + "H/s" if match.group(2) else "H/s"
+                        speed_text = f"{speed_val} {unit}"
+                        output = f"🕒 {now}   ⚡ {color_text(speed_text, Style.CYAN)}"
+                        break
 
             # แสดงผล
             if output:
@@ -60,7 +74,7 @@ def run_miner_monitor():
 
     except KeyboardInterrupt:
         process.terminate()
-        print(color_text("\n⛔ หยุดโปรแกรมโดยผู้ใช้", Style.YELLOW))
+        print(color_text("\n⛔ ยกเลิกการขุดแล้ว", Style.YELLOW))
     except Exception as e:
         process.terminate()
         print(color_text(f"เกิดข้อผิดพลาด: {e}", Style.RED))
