@@ -36,9 +36,15 @@ def print_ui():
     print("  VRSC Miner - Live Status")
     print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━{Style['reset']}")
 
+     # Print the status messages with yellow background
+    if status_lines:
+        print(f"\n{Style['cyan']}[Status]{Style['reset']}")
+        for line in status_lines[-3:]:
+            print(f"{Style['bg_yellow']}  {highlight_different(line)} {Style['reset']}")
+
     # Print last 5 share accepted logs
     for s in shares[-5:]:
-        print(f"{Style['bg_green']} {Style['green']}[✓] {highlight_different(s)} {Style['reset']}")
+        print(f"{Style['green']} {Style['green']}[✓] {highlight_different(s)} {Style['reset']}")
 
     # Print the latest speed logs with cyan background
     if speeds:
@@ -46,15 +52,8 @@ def print_ui():
         for sp in speeds[-3:]:
             print(f"{Style['bg_cyan']}  {highlight_different(sp)} {Style['reset']}")
 
-    # Print the status messages with yellow background
-    if status_lines:
-        print(f"\n{Style['bg_yellow']}[Status]{Style['reset']}")
-        for line in status_lines[-3:]:
-            print(f"{Style['bg_yellow']}  {highlight_different(line)} {Style['reset']}")
 
-    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
-    print(" Press Ctrl+C to stop mining")
-    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━{Style['reset']}")
+
 
 def run_monitor():
     process = subprocess.Popen(
