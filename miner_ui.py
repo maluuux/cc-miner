@@ -17,6 +17,15 @@ def get_time():
 def color_text(text, color):
     return f"{color}{text}{Style.RESET}"
 
+# คำที่ต้องการแทนที่ พร้อมข้อความใหม่
+custom_keywords = {
+    "different": "⚠️ ค่าความยากเปลี่ยนแล้ว!",
+    "new job": "📥 งานใหม่เข้ามา",
+    "stratum": "🔌 เชื่อมต่อ pool แล้ว",
+    "accepted": "✅ แชร์สำเร็จ!",
+    "rejected": "❌ แชร์ถูกปฏิเสธ!",
+}
+
 def run_miner_monitor():
     process = subprocess.Popen(
         ['./start.sh'],
@@ -34,19 +43,24 @@ def run_miner_monitor():
             now = get_time()
             output = ""
 
-            elif "different" in line.lower() or "diff" in line.lower():
-            # แทนที่คำว่า 'different' ด้วยข้อความใหม่
-                custom_message = "⚠️ ค่าความยากเปลี่ยนแล้ว!"  # <<== คุณสามารถเปลี่ยนข้อความนี้ได้
-                output = f"{color_text(custom_message, Style.YELLOW)}"
+            # ตรวจสอบคำที่ต้องแทน
+            for keyword, replacement in custom_keywords.items():
+                if keyword in line.lower():
+                    output = f"🕒 {now}   {color_text(replacement, Style.YELLOW)}"
+                    break
 
+            # ตรวจจับ speed (mh/s)
+            if not output and "mh/s" in line.lower():
+                output = f"🕒 {now}   ⚡ {color_text(line, Style.CYAN)}"
 
+            # แสดงผล
             if output:
                 print(output)
                 time.sleep(0.1)
 
     except KeyboardInterrupt:
         process.terminate()
-        print(color_text("\n⛔ ยกเลิกการขุดแล้ว", Style.YELLOW))
+        print(color_text("\n⛔ หยุดโปรแกรมโดยผู้ใช้", Style.YELLOW))
     except Exception as e:
         process.terminate()
         print(color_text(f"เกิดข้อผิดพลาด: {e}", Style.RED))
