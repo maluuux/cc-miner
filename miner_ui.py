@@ -34,25 +34,13 @@ def run_miner_monitor():
             now = get_time()
             output = ""
 
-            # Speed line (MH/s)
-            if "mh/s" in line.lower():
-                output = f"🕒 {now}   ⚡ {color_text(line, Style.CYAN)}"
-
-            # Accepted share
             elif "accepted" in line.lower():
-                output = f"🕒 {now}   ✅ {color_text(line, Style.GREEN)}"
-
-            # Rejected share
-            elif "rejected" in line.lower():
-                output = f"🕒 {now}   ❌ {color_text(line, Style.RED)}"
-
-            # Difficulty change or 'different'
+                output = f"{color_text(line, Style.GREEN)}"
             elif "different" in line.lower() or "diff" in line.lower():
-                output = f"🕒 {now}   ⚠️  {color_text(line, Style.YELLOW)}"
+            # แทนที่คำว่า 'different' ด้วยข้อความใหม่
+                custom_message = "⚠️ ค่าความยากเปลี่ยนแล้ว!"  # <<== คุณสามารถเปลี่ยนข้อความนี้ได้
+                output = f"{color_text(custom_message, Style.YELLOW)}"
 
-            # Other stratum / new job
-            elif "stratum" in line.lower() or "new job" in line.lower():
-                output = f"🕒 {now}   ℹ️  {line}"
 
             if output:
                 print(output)
