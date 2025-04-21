@@ -2,21 +2,14 @@ import subprocess
 import re
 import os
 import time
-from datetime import datetime
 
-# Custom styles for background color and text
 Style = {
     "reset": "\033[0m",
     "green": "\033[92m",
     "cyan": "\033[96m",
     "yellow": "\033[93m",
-    "purple": "\033[95m",
-    "bg_black": "\033[48;5;235m",
-    "bg_green": "\033[48;5;22m",
-    "bg_cyan": "\033[48;5;38m",
-    "bg_yellow": "\033[48;5;220m",
-    "bg_purple": "\033[48;5;129m",
-    "bold": "\033[1m"
+    "bold": "\033[1m",
+    "dim": "\033[2m"
 }
 
 shares = []
@@ -26,35 +19,28 @@ status_lines = []
 def clear():
     os.system('clear')
 
-def get_current_time():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
 def print_ui():
     clear()
-    print(f"{Style['bg_purple']} {Style['bold']}Date: {get_current_time()} {Style['reset']}")
-    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━{Style['reset']}")
+    print(f"{Style['cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
     print("  VRSC Miner - Live Status")
-    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━{Style['reset']}")
+    print("━━━━━━━━━━━━━━━━━━━━━━━" + Style['reset'])
 
-    # Print last 5 share accepted logs with a green background
     for s in shares[-5:]:
-        print(f"{Style['bg_green']} {Style['green']}[✓] {s} {Style['reset']}")
+        print(f"{Style['green']}[✓] {s}{Style['reset']}")
 
-    # Print the latest speed logs with cyan background
     if speeds:
-        print(f"\n{Style['bg_cyan']}[Speed]{Style['reset']}")
+        print(f"\n{Style['cyan']}[Speed]{Style['reset']}")
         for sp in speeds[-3:]:
-            print(f"{Style['bg_cyan']}  {sp} {Style['reset']}")
+            print(f"  {sp}")
 
-    # Print the status messages with yellow background
     if status_lines:
-        print(f"\n{Style['bg_yellow']}[Status]{Style['reset']}")
+        print(f"\n{Style['yellow']}[Status]{Style['reset']}")
         for line in status_lines[-3:]:
-            print(f"{Style['bg_yellow']}  {line} {Style['reset']}")
+            print(f"  {line}")
 
-    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
+    print(f"{Style['cyan']}━━━━━━━━━━━━━━━━━━━━━━━")
     print(" Press Ctrl+C to stop mining")
-    print(f"{Style['bg_cyan']}━━━━━━━━━━━━━━━━━━━━━━━{Style['reset']}")
+    print("━━━━━━━━━━━━━━━━━━━━━━━" + Style['reset'])
 
 def run_monitor():
     process = subprocess.Popen(
@@ -82,7 +68,7 @@ def run_monitor():
                 status_lines.append(line)
 
             print_ui()
-            time.sleep(0.05)  # Update every 50ms
+            time.sleep(0.05)
 
     except KeyboardInterrupt:
         process.terminate()
