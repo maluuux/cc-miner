@@ -50,11 +50,18 @@ def run_miner_monitor():
             now = get_time()
             output = ""
 
-            # จับคำแทนก่อน
-            for keyword, replacement in custom_keywords.items():
-                if keyword in line.lower():
-                    output = f"🕒 {now}   {color_text(replacement, Style.YELLOW)}"
-                    break
+            # ตรวจจับ difficulty แบบเจาะจง พร้อมแสดงค่า
+            diff_match = re.search(r'diff(?:iculty)?(?: changed)?(?: to)?\s*([0-9.]+)', line.lower())
+            if diff_match:
+                diff_value = diff_match.group(1)
+                output = f"🕒 {now}   ⚠️ ค่าความยากถูกปรับเป็น {color_text(diff_value, Style.YELLOW)}"
+            
+            # จับคำแทนอื่น ๆ (ถ้ายังไม่มี output)
+            if not output:
+                for keyword, replacement in custom_keywords.items():
+                    if keyword in line.lower():
+                        output = f"🕒 {now}   {color_text(replacement, Style.YELLOW)}"
+                        break
 
             # ตรวจ speed
             if not output:
