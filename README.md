@@ -2,11 +2,15 @@
 termux-setup-storage
 ```
 ```
-yes | pkg update && pkg upgrade -y
-yes | pkg install python git wget -y
-yes | pkg install jansson -y
-yes | pkg install build-essential -y
-pip install psutil
+yes | pkg update -y
+yes | pkg upgrade -y
+yes | pkg install libjansson wget nano -y
+yes | pkg install python -y
+yes | pkg install python make clang libffi openssl libjpeg-turbo -y
+pip install requests
+pip install --upgrade pip wheel
+pip install psutil --no-binary psutil
+pkg install nano
 mkdir ccminer && cd ccminer
 wget https://raw.githubusercontent.com/maluuux/cc-miner/main/ccminer
 wget https://raw.githubusercontent.com/maluuux/cc-miner/main/config.json
