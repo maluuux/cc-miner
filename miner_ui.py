@@ -8,31 +8,41 @@ class Style:
     RED = "\033[91m"
     YELLOW = "\033[93m"
     CYAN = "\033[96m"
+    GREEN = "\033[92m"
 
-def highlight_keywords(line):
+# กรองและตกแต่งเฉพาะข้อความสำคัญ
+def highlight_important(line):
     # ALARM
     if "alarm" in line.lower():
-        line = f"{Style.RED}⚠️ {line.strip()}{Style.RESET}"
-    # Difficulty
-    line = re.sub(r'(diff(?:iculty)?(?: changed)?(?: to)?\s*[0-9.]+)',
-                  lambda m: f"{Style.YELLOW}{m.group(1)}{Style.RESET}", line, flags=re.IGNORECASE)
-    # accepted
-    line = re.sub(r'(accepted)', f"{Style.YELLOW}✅ \\1{Style.RESET}", line, flags=re.IGNORECASE)
-    # rejected
-    line = re.sub(r'(rejected)', f"{Style.RED}❌ \\1{Style.RESET}", line, flags=re.IGNORECASE)
-    # new job
-    line = re.sub(r'(new job)', f"{Style.YELLOW}📥 \\1{Style.RESET}", line, flags=re.IGNORECASE)
-    # stratum
-    line = re.sub(r'(stratum)', f"{Style.YELLOW}🔌 \\1{Style.RESET}", line, flags=re.IGNORECASE)
-    # speed (เฉพาะ > 2.0 MH/s)
-    mh_match = re.search(r'([0-9.]+)\s*mH/s', line, re.IGNORECASE)
-    if mh_match:
-        mh_val = float(mh_match.group(1))
-        if mh_val >= 2.0:
-            line = re.sub(r'([0-9.]+\s*mH/s)', f"{Style.CYAN}⚡ \\1{Style.RESET}", line, flags=re.IGNORECASE)
-    return line
+        return f"{Style.RED}⚠️  แจ้งเตือน: {line.strip()}{Style.RESET}"
 
-def run_monitor():
+    # New Job
+    if "new job" in line.lower():
+        return f"{Style.YELLOW}📥 งานใหม่: {line.strip()}{Style.RESET}"
+
+    # Accepted
+    if "accepted" in line.lower():
+        return f"{Style.GREEN}✅ แชร์สำเร็จ: {line.strip()}{Style.RESET}"
+
+    # Rejected
+    if "rejected" in line.lower():
+        return f"{Style.RED}❌ แชร์ถูกปฏิเสธ: {line.strip()}{Style.RESET}"
+
+    # Difficulty
+    if "diff" in line.lower():
+        return f"{Style.YELLOW}🎯 ความยาก: {line.strip()}{Style.RESET}"
+
+    # ความเร็ว MH/s
+    if "mh/s" in line.lower():
+        mh_match = re.search(r'([0-9.]+)\s*mH/s', line, re.IGNORECASE)
+        if mh_match:
+            mh = float(mh_match.group(1))
+            if mh >= 2.0:
+                return f"{Style.CYAN}⚡ ความเร็ว: {mh_match.group(1)} MH/s{Style.RESET}"
+
+    return None  # ไม่แสดงถ้าไม่ใช่ข้อมูลสำคัญ
+
+def run_clean_monitor():
     process = subprocess.Popen(
         ['./start.sh'],
         stdout=subprocess.PIPE,
@@ -45,11 +55,10 @@ def run_monitor():
             line = line.strip()
             if not line:
                 continue
-            # ไม่ต้องกรอง temp แต่สามารถกรองได้ถ้าต้องการ
-            # if 'temp' in line.lower(): continue
-            highlighted = highlight_keywords(line)
-            print(highlighted)
-            time.sleep(0.01)
+            highlight = highlight_important(line)
+            if highlight:
+                print(highlight)
+                time.sleep(0.01)
     except KeyboardInterrupt:
         process.terminate()
         print("\n⛔ ยกเลิกการขุดแล้ว")
@@ -58,4 +67,4 @@ def run_monitor():
         print(f"เกิดข้อผิดพลาด: {e}")
 
 if __name__ == "__main__":
-    run_monitor()
+    run_clean_monitor()
